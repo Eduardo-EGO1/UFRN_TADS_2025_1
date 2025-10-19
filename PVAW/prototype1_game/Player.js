@@ -6,7 +6,8 @@ let ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
-const gravidade = 1;
+const gravidade = 0.5;
+let isOnGround = true; //VERIFICADOR PARA EVITAR DOUBLE JUMP/VÔO
 
 class Player {
   constructor() {
@@ -43,15 +44,18 @@ class Player {
       this.velocity.y += gravidade;
     } else {
       this.velocity.y = 0;
+      isOnGround = true;
     }
   }
 }
 
+
+
 class Platform {
-  constructor() {
+  constructor({ x, y }) {
     this.position = {
-      x: 400,
-      y: 500,
+      x, //DINAMISMO PARA NOVAS INSTANCIAS, PASSANDO COMO PARAMETROS OS VALORES NA CRIAÇÃO DA INSTANCIA
+      y,
     }
     this.size = {
       width: 200,
@@ -64,8 +68,8 @@ class Platform {
   }
 }
 
-
-const platform = new Platform()
+//PERMITE ADICIONAR MAIS DE 1 PLATAFORMA, ESTÁ DENTRO DE UMA ARRAY
+const platforms = [new Platform({ x: 300, y: 600 }), new Platform({ x: 600, y: 400 })]
 let p1 = new Player();
 
 const keys = {
@@ -84,30 +88,63 @@ function animate() {
   requestAnimationFrame(animate);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   p1.update();
-  platform.draw();
-  if (keys.right.pressed) { //Criando animação de acordo com a key pressionada (event listener abaixo)
-    p1.velocity.x = 5;
+  platforms.forEach(platform => {
+    platform.draw();
+  })
+  if (keys.right.pressed && p1.position.x < 700) { //Criando animação de acordo com a key pressionada (event listener abaixo) || Caso o usuário não ultrapasse o edge (definido como 700width)
+    p1.velocity.x = 2;
+  }
+  else if (keys.left.pressed && p1.position.x > 100) {
+    p1.velocity.x = -2;
+  } else p1.velocity.x = 0;
+
+  if (keys.right.pressed) {
+    platforms.forEach(platform => {
+      platform.position.x -= 2;
+    })
+
   }
   else if (keys.left.pressed) {
-    p1.velocity.x = -5;
-  } else p1.velocity.x = 0;
-  if (keys.up.pressed) {
-    p1.velocity.y -= 2;
+    platforms.forEach(platform => {
+      platform.position.x += 2;
+    })
+
   }
+
+  // if (keys.up.pressed && isOnGround == true) {
+  //   isOnGround = false;
+  //   p1.velocity.y -= 2;
+
+  // }
   // CONDICIONAL PRA VERIFICAR O PONTO DE COLISÃO ENTRE O PLAYER E A PLATAFORMA, PRIMEIRO VERIFICA SE A ALTURA DO PLAYER
   //ESTÁ MAIOR OU IGUAL A PLATAFORMA (NO CASO O Y <=), PRECISA DA SEGUNDA CONDICIONAL (&&), SENÃO O PLAYER NUNCA IRIA PISAR NO CHÃO..
   //NA SEGUNDA CONDICIONAL PRECISA CONTAR COM A VELOCIDADE, PARA PREVER O PONTO FUTURO, ASSIM ISSO SÓ VAI SER VERDADEIRO MUITO PRÓXIMO DE TOCAR/TOCANDO O TOPO DA PLATAFORMA
   //NA TERCEIRA CONDICIONAL (&&) PRECISAMOS VERIFICAR O EIXO X, PARA QUE SOMENTE AO SAIR DO COMPRIMENTO DIREITO DA PLATAFORMA (POSIÇÃO + LARGURA DA PLATAFORMA), O PLAYER VOLTE A CAIR
   //NA ULTIMA CONDICIONAL, O PONTO DIREITO DO PLAYER (POSIÇÃO + LARGURA) DEVE SER MAIOR OU IGUAL AO PONTO ESQUERDO DA PLATAFORMA (POSIÇÃO), PARA QUE SOMENTE AO PASSAR ESSE EIXO, O PLAYER VOLTE A CAIR
-  if ((p1.position.y + p1.size.height <= platform.position.y) && (p1.position.y + p1.velocity.y + p1.size.height >= platform.position.y) &&
-    (p1.position.x <= platform.size.width + platform.position.x) && (p1.position.x + p1.size.width >= platform.position.x)) {
-    p1.velocity.y = 0;
-  }
+  platforms.forEach(platform => {
+    platform.draw();
+    if ((p1.position.y + p1.size.height <= platform.position.y) && (p1.position.y + p1.velocity.y + p1.size.height >= platform.position.y) &&
+      (p1.position.x <= platform.size.width + platform.position.x) && (p1.position.x + p1.size.width >= platform.position.x)) {
+      p1.velocity.y = 0;
+      isOnGround = true;
+    }
+    //VERIFICAÇÃO DE COLISÃO DE BAIXO PARA CIMA: EVITA ULTRAPASSAR AS PLATAFORMAS SE NÃO ESTIVER NAS BORDAS LATERAIS (EIXO X) DELAS
+    if (
+      (p1.position.y >= platform.position.y + platform.size.height) && // p1 está abaixo da plataforma
+      (p1.position.y + p1.velocity.y <= platform.position.y + platform.size.height) && // Vai colidir no próximo frame
+      (p1.position.x <= platform.position.x + platform.size.width) &&
+      (p1.position.x + p1.size.width >= platform.position.x) &&
+      (p1.velocity.y < 0) // Está subindo
+    ) {
+      p1.velocity.y = 0;
+      // Alinha abaixo da plataforma
+    }
+  })
 }
 
 document.addEventListener("keyup", (Key) => { //Event Listener ao soltar o botão, para impedir que o player continue se movendo
   if (Key.code == "KeyW" || Key.code == "Space") { //Ainda não consegui fazer ele parar de dar double jump/jump infinito
-    keys.up.pressed = false;
+
   } else if (Key.code == "KeyD" || Key.code == "ArrowRight") {
     keys.right.pressed = false;
   } else if (Key.code == "KeyA" || Key.code == "ArrowLeft") {
@@ -117,7 +154,10 @@ document.addEventListener("keyup", (Key) => { //Event Listener ao soltar o botã
 
 document.addEventListener("keydown", (Key) => {
   if (Key.code == "KeyW" || Key.code == "Space") {
-    keys.up.pressed = true;
+    if (isOnGround) {
+      p1.velocity.y -= 20
+      isOnGround = false;
+    }
   } else if (Key.code == "KeyD" || Key.code == "ArrowRight") {
     keys.right.pressed = true;
   } else if (Key.code == "KeyA" || Key.code == "ArrowLeft") {
