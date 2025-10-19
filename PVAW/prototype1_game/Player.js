@@ -6,6 +6,10 @@ let ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+//CRIANDO IMAGEM DA PLATAFORMA
+const image = new Image();
+image.src = 'imgs/platform.png'
+console.log(image)
 const gravidade = 0.5;
 let isOnGround = true; //VERIFICADOR PARA EVITAR DOUBLE JUMP/VÔO
 
@@ -52,24 +56,25 @@ class Player {
 
 
 class Platform {
-  constructor({ x, y }) {
+  constructor({ x, y, image }) {
     this.position = {
       x, //DINAMISMO PARA NOVAS INSTANCIAS, PASSANDO COMO PARAMETROS OS VALORES NA CRIAÇÃO DA INSTANCIA
-      y,
+      y
     }
+    this.image = image
     this.size = {
-      width: 200,
-      height: 20,
+
+      width: image.width,
+      height: image.height
     }
   }
   draw() {
-    ctx.fillStyle = 'blue'
-    ctx.fillRect(this.position.x, this.position.y, this.size.width, this.size.height)
+    ctx.drawImage(this.image, this.position.x, this.position.y)
   }
 }
 
 //PERMITE ADICIONAR MAIS DE 1 PLATAFORMA, ESTÁ DENTRO DE UMA ARRAY
-const platforms = [new Platform({ x: 300, y: 600 }), new Platform({ x: 600, y: 400 })]
+const platforms = [new Platform({ x: 300, y: 600, image }), new Platform({ x: 600, y: 500, image })]
 let p1 = new Player();
 
 const keys = {
@@ -87,10 +92,11 @@ const keys = {
 function animate() {
   requestAnimationFrame(animate);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  p1.update();
   platforms.forEach(platform => {
     platform.draw();
   })
+
+
   if (keys.right.pressed && p1.position.x < 700) { //Criando animação de acordo com a key pressionada (event listener abaixo) || Caso o usuário não ultrapasse o edge (definido como 700width)
     p1.velocity.x = 2;
   }
@@ -137,9 +143,9 @@ function animate() {
       (p1.velocity.y < 0) // Está subindo
     ) {
       p1.velocity.y = 0;
-      // Alinha abaixo da plataforma
     }
   })
+  p1.update();
 }
 
 document.addEventListener("keyup", (Key) => { //Event Listener ao soltar o botão, para impedir que o player continue se movendo
